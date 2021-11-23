@@ -236,7 +236,7 @@ def phi_z():
 
 def all_kinetic_energy():
 
-    exact_data = np.zeros([n_time_steps[0],4])
+    exact_data = np.zeros([n_time_steps[0],5])
     data_time = []
 
     for ii in range(n_time_steps[0]):
@@ -247,6 +247,7 @@ def all_kinetic_energy():
     z_cood = z_vec()
     
     # Nuclear 
+    #d_geo_z = np.zeros((n_time_steps[0], M))
     Re_chi_z = np.zeros((n_time_steps[0], M))
     Im_chi_z = np.zeros((n_time_steps[0], M))
      
@@ -295,10 +296,12 @@ def all_kinetic_energy():
     diff2_Im = diff_manybody_vec(diff_Im)
 
     Tn_phy = []
+    d_geo = []
 
     for ii in range(n_time_steps[0]):
         int_var = 0.0
         temp_dphy2 = []
+        temp_dgeo = []
         
         for jz in range(M):
 
@@ -339,13 +342,24 @@ def all_kinetic_energy():
             # NACT1 contribution
             # temp_var = 0.0
             # for in range(Tot_state):
+        temp_dgeo = -np.array(temp_dphy2)/(2.0*nuc_mass)
+        #d_geo_z[ii][:] = temp_dgeo[:]
+
         temp_dphy2 = np.array(temp_dphy2)*den_mat[ii][:]
         temp_dphy2 = list(temp_dphy2)
+        
         int_var = integrate.simps(temp_dphy2, z_cood, dz)
         int_var = -int_var/(2.0*nuc_mass)
         Tn_phy.append(int_var)
+        
+        # Geometric phase
+        int_var = 0.0
+        int_var = integrate.simps(np.sqrt(np.abs(temp_dgeo)), z_cood, dz)
+        d_geo.append(int_var)
     
     exact_data[:,2] = Tn_phy
+    exact_data[:,3] = d_geo
+
     # plt.plot(Tn_phy,'-o')
     # plt.show()
 
@@ -380,8 +394,8 @@ def all_kinetic_energy():
         int_var = -int_var/(2.0*nuc_mass)
         Tn_Psi.append(int_var) 
     
-    exact_data[:,3] = Tn_Psi
-    details = ['%Time', 'Tn-marg', 'Tn-Phy', 'Tn-Psi']
+    exact_data[:,4] = Tn_Psi
+    details = ['%Time',       'Tn-marg','          Tn-Phy','             d-geo','         Tn-Psi']
 
     with open('exact_data.dat', 'w') as f: 
         write = csv.writer(f) 
@@ -390,8 +404,8 @@ def all_kinetic_energy():
     print("Hi Celso") 
     # plt.plot(Tn_Psi,'-o')
     # plt.show()
-    
-
+    #return d_geo_z
+    ...    
 
 if __name__ == '__main__':
 
@@ -400,8 +414,8 @@ if __name__ == '__main__':
     # Time propagation
    
     #density() # nuclear density
-    #all_kinetic_energy() # all kinetic energies contribution
+    all_kinetic_energy() # all kinetic energies contribution
     #tdpes() # Time-dependent potential energy surface
 
-    ani = SubplotAnimation(z_vec(), BOPE, density(), nuclear_phase(), tdpes(), continuity_eq(), time_step)
-    ani.save('sticking_exact.mp4')
+    #ani = SubplotAnimation(z_vec(), BOPE, density(), nuclear_phase(), tdpes(), continuity_eq(), time_step)
+    #ani.save('sticking_exact.mp4')
