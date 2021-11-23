@@ -18,3 +18,7 @@ All the input files for the system under study are in the Results directories. R
 3. NACT1.dat, NACT2.dat: First and second-order non-adiabatic coupling terms.
 4. Re_Beta.dat, Im_Beta.dat: Real and Imaginary components of the many-body time-dependent Schrodinger equation. 
 ```
+
+## Running the scripts
+By running `python exact_fact_analysis.py,` you can generate a `sticking_exact.mp4` video displaying the TDPES, the nuclear density and phases, and the residual of the continuity function <img src="https://render.githubusercontent.com/render/math?math=f(z,t)">.     
+
