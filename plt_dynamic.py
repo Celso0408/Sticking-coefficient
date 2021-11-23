@@ -54,7 +54,7 @@ class SubplotAnimation(animation.TimedAnimation):
         ax4.add_line(self.line4)
         ax4.set_xlim(0, 10)
         ax4.set_ylim(-0.5, 0.5)
-        ax4.set_ylabel("Residual continuity $ (z,t) $")
+        ax4.set_ylabel("$f(z,t) $")
         ax4.set_xlabel("$z(a.u)$")
 
 

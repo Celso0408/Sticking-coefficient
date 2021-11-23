@@ -398,16 +398,10 @@ if __name__ == '__main__':
     read_input()
 
     # Time propagation
-    # density() # Plot the nuclear density '|\chi(z,t)|^2'
-    # nuclear_phase()
-    # print('here')
-    # chi_z()
-    # phi_z()
-    #plt_dynamic(density(), nuclear_phase(), tdpes())
-    #plt_dynamic(density(), nuclear_phase(), tdpes())
-    #tdpes()
-    #all_kinetic_energy()
-    #tdpes()
+   
+    #density() # nuclear density
+    #all_kinetic_energy() # all kinetic energies contribution
+    #tdpes() # Time-dependent potential energy surface
 
     ani = SubplotAnimation(z_vec(), BOPE, density(), nuclear_phase(), tdpes(), continuity_eq(), time_step)
     ani.save('sticking_exact.mp4')
