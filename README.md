@@ -19,7 +19,7 @@ All the input files for the system under study are in the Results directories. R
 4. Re_Beta.dat, Im_Beta.dat: Real and Imaginary components of the many-body time-dependent Schrodinger equation. 
 ```
 
-## Running the scripts
+## 3. Running the scripts and output files
 By running `python exact_fact_analysis.py,` you can generate a `sticking_exact.mp4` video displaying the TDPES, the nuclear density and phases, and the residual of the continuity function <img src="https://render.githubusercontent.com/render/math?math=f(z,t)">.     
 
 In the `exact_fact_analysis.py` file we may have following options: 
