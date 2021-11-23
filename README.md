@@ -9,3 +9,12 @@ To get this set of scripts up running on your available computational resources,
 2. matplotlib, pandas.
 3. numpy, csv. 
 ```
+## 2. Input files
+All the input files for the system under study are in the Results directories. Rename the folder to `Results` in case it has a different name.
+
+```
+1. input_NRG.dat: initial inputs for the many-body time-dependent Schrodinger equation.
+2. Energy_BO.dat: Born-Oppenheimer potential energy surface for the system's ground state.
+3. NACT1.dat, NACT2.dat: First and second-order non-adiabatic coupling terms.
+4. Re_Beta.dat, Im_Beta.dat: Real and Imaginary components of the many-body time-dependent Schrodinger equation. 
+```
