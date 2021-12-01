@@ -1,0 +1,23 @@
+1.8,            Lambda
+1500,           M
+10,             N
+10,             leng_z
+-13.6,          Ea
+5.0,            z0
+-7.0,           k0
+1836.15,        Nuc_mass
+0.6,            sig
+0.005,          time_step
+1.0,            D_Band
+5000000,        it_max
+1,              Excited_state
+10,             Tot_state
+T,              F_Energy_BO
+T,              F_NACT
+T,              F_TDPE
+F,              F_Den_nuc
+F,              F_Full_Kin
+F,              F_Nuc_Kin
+T,              F_Re_Beta
+T,              F_Im_Beta
+
