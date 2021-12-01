@@ -15,7 +15,7 @@ class SubplotAnimation(animation.TimedAnimation):
         self.cont_eq = cont_eq
         self.time_step = Time_step
 
-        print(self.x.shape) 
+        print(self.y.shape) 
 
         fig = plt.figure(figsize = (13,9))
         ax1 = fig.add_subplot(4, 1, 1)
@@ -34,7 +34,7 @@ class SubplotAnimation(animation.TimedAnimation):
         ax2.add_line(self.line2)
         ax2.set_xlim(0, 10)
         ax2.set_xticklabels([])
-        ax2.set_ylim(-1, 1)
+        ax2.set_ylim(-100, 100)
         ax2.set_ylabel("$S(z,t)$")
         Time = 0.00
         self.text = ax2.text(8.5, 0.2, str(Time))
@@ -46,15 +46,15 @@ class SubplotAnimation(animation.TimedAnimation):
         ax3.add_line(self.line3a)
         ax3.legend([self.line3, self.line3a], ['TDPES', 'BOPE'])
         ax3.set_xlim(0, 10)
-        ax3.set_ylim(-1.6, 1.0)
+        ax3.set_ylim(-1.6, 7.6)
         ax3.set_ylabel("TDPES$(z,t)$")
         ax3.set_xlabel("$z(a.u)$")
 
         self.line4 = Line2D([], [], color = 'black', linewidth = 2)
         ax4.add_line(self.line4)
         ax4.set_xlim(0, 10)
-        ax4.set_ylim(-0.5, 0.5)
-        ax4.set_ylabel("$f(z,t) $")
+        ax4.set_ylim(-0.2, 0.2)
+        ax4.set_ylabel("Residual continuity $ (z,t) $")
         ax4.set_xlabel("$z(a.u)$")
 
 
@@ -66,7 +66,7 @@ class SubplotAnimation(animation.TimedAnimation):
         for i in range(self.x.shape[0]):
             i = framedata
             #print(i)
-            Time = round(i*500*self.time_step/41,3)
+            Time = round(i*1000*self.time_step/41,3)
             Time = "Time = " + str(Time) + " (fs)"
             self.text.set_text(Time)
 

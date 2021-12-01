@@ -10,7 +10,7 @@ import matplotlib.animation as animation
 
 
 from scipy import integrate
-from scipy.integrate import simps
+from scipy.integrate import simps, quad
 from scipy.interpolate import CubicSpline
 
 
@@ -31,8 +31,8 @@ def read_input(file_name='Results/input_NRG.dat'):
     NACT2 = NACT2.to_numpy()
 
     Beta = Re_Beta**2.0 + Im_Beta**2.0
-    omega = 1.5
-    print("omega = ", omega)
+    omega = 0.001
+    #print("omega = ", omega)
 
     n_time_steps = Beta.shape # number of steps 
     
@@ -47,7 +47,8 @@ def read_input(file_name='Results/input_NRG.dat'):
     
     N = int(df.loc[2][0]) # number of wilson chain
     leng_z = float(df.loc[3][0]) # size box
-    init_k0 = np.abs(float(df.loc[6][0])) # initial moment
+    init_k0 = float(df.loc[6][0]) # initial moment
+    print('init_k0 =', init_k0)
     dz = leng_z/M
     nuc_mass = float(df.loc[7][0]) # nucclear mass
     time_step = float(df.loc[9][0]) # time step in a.u
@@ -73,19 +74,34 @@ def diff_manybody_vec(manybody_vec):
 
         for jj in range(Tot_state):
             temp_vec_jz = []
-            temp_diff_jz = []
+            temp_diff_jz = []  
 
             for kk in range(jj, n_time_steps[1], Tot_state):               
-                temp_vec_jz.append(temp_vec[kk])
+                temp_vec_jz.append(temp_vec[kk])          
             
-            temp_diff_jz = np.gradient(temp_vec_jz, dz, edge_order=2)
-
+            temp_diff_jz = np.gradient(temp_vec_jz, dz, edge_order = 2)
             i = 0
             for kk in range(jj, n_time_steps[1], Tot_state):               
                 diff_mat[ii][kk] = temp_diff_jz[i]
                 i += 1
 
     return diff_mat 
+
+def density():
+
+    den_mat = np.zeros((n_time_steps[0], M))
+    #z_cood = z_vec()
+    for ii in range(n_time_steps[0]):
+        Beta1=[]
+        for jz in range(M):
+            Beta1.append(np.sum(Beta[ii][Tot_state*jz:Tot_state*(jz+1)]))
+        den_mat[ii][:] = Beta1[:]
+        #print(integrate.simps(den_mat[ii][:], z_cood, dz))
+    with open('density.dat', 'w') as f: 
+        write = csv.writer(f) 
+        write.writerows(den_mat)
+    
+    return den_mat
 
 def nuclear_phase():
 
@@ -94,58 +110,50 @@ def nuclear_phase():
     den_mat = density()
 
     S_mat = np.zeros((n_time_steps[0], M))
-    Inner_Im_dRe = np.zeros((n_time_steps[0], M))
-    Inner_Re_dIm = np.zeros((n_time_steps[0], M))
+    dsdz_NACT_d1 = np.zeros((n_time_steps[0], M))
 
     diff_Re_Beta = diff_manybody_vec(Re_Beta)
     diff_Im_Beta = diff_manybody_vec(Im_Beta)
 
     for ii in range(n_time_steps[0]):
         
-        # <Re(psi)| d(Im(psi))/dz|> and <Im(psi)| d(Re(psi))/dz|>
-        for jj in range(Tot_state):
-            temp_Re_jz = []
-            temp_Im_jz = []
-            diff_Re_jz = []
-            diff_Im_jz = []
-
-            for kk in range(jj, n_time_steps[1], Tot_state):
-
-                temp_Re_jz.append(Re_Beta[ii][kk])
-                temp_Im_jz.append(Im_Beta[ii][kk])
-                diff_Re_jz.append(diff_Re_Beta[ii][kk])
-                diff_Im_jz.append(diff_Im_Beta[ii][kk])
+        # NACT d_1 contribution
+        temp_dsdz = np.zeros(M)
+        for jz in range(M):
+            temp_NACT1 = np.zeros([Tot_state, Tot_state])
+            temp_NACT1 = NACT1[Tot_state*jz:Tot_state*(jz+1)][:]
             
-            Inner_Re_dIm[ii][:] = Inner_Re_dIm[ii][:] + ( np.array(temp_Im_jz)*np.array(diff_Re_jz) )
-            Inner_Im_dRe[ii][:] = Inner_Im_dRe[ii][:] + ( np.array(temp_Re_jz)*np.array(diff_Im_jz) )
-
-        temp_dsdz = (Inner_Re_dIm[ii][:] + Inner_Im_dRe[ii][:])/( den_mat[ii][:] + omega )
+            temp_Re_jz = np.zeros(Tot_state)
+            temp_Im_jz = np.zeros(Tot_state)                       
+            
+            temp_Re_jz = Re_Beta[ii][Tot_state*jz:Tot_state*(jz+1)]   
+            temp_Im_jz = Im_Beta[ii][Tot_state*jz:Tot_state*(jz+1)]
+            
+            temp_d1 = 0.0
+            for ll in range(Tot_state):
+                for kk in range(Tot_state):
+                    temp_d1 = temp_d1 + (temp_Re_jz[ll]*temp_Im_jz[kk] - temp_Im_jz[ll]*temp_Re_jz[kk])*temp_NACT1[ll][kk]  
+        
+            dsdz_NACT_d1[ii][jz] = temp_d1
+             
+            temp_diff_Re_jz = np.zeros(Tot_state)
+            temp_diff_Im_jz = np.zeros(Tot_state)                       
+            
+            temp_diff_Re_jz = np.array(diff_Re_Beta[ii][Tot_state*jz:Tot_state*(jz+1)])   
+            temp_diff_Im_jz = np.array(diff_Im_Beta[ii][Tot_state*jz:Tot_state*(jz+1)])
+        
+            temp_dsdz[jz] = (np.inner(temp_Re_jz, temp_diff_Im_jz) - np.inner(temp_Im_jz,temp_diff_Re_jz) + dsdz_NACT_d1[ii][jz])/( den_mat[ii,jz] + omega )
+            #temp_dsdz[jz] = ( np.inner(temp_Re_jz, temp_diff_Im_jz) - np.inner(temp_Im_jz,temp_diff_Re_jz) )/( den_mat[ii][jz] + omega )
         cs = CubicSpline(z_vec, temp_dsdz)
 
         for jz in range(M):
             S_mat[ii][jz] = cs.integrate(z_vec[0], z_vec[jz])
+            #S_mat[ii][jz] = np.trapz(temp_dsdz[0:jz], z_vec[0:jz], dz)
 
         S_mat[ii][:] = S_mat[ii][:] - S_mat[ii][M-1]
- 
-    return S_mat
-
-
-def density():
-
-    den_mat = np.zeros((n_time_steps[0], M))
-
-    for ii in range(n_time_steps[0]):
-        Beta1=[]
-        for jz in range(M):
-            Beta1.append(np.sum(Beta[ii][Tot_state*jz:Tot_state*(jz+1)]))
+        #print(np.max(S_mat[ii][:]), np.min(S_mat[ii][:]))
         
-        den_mat[ii][:] = Beta1[:]
-    
-    with open('density.dat', 'w') as f: 
-        write = csv.writer(f) 
-        write.writerows(den_mat)
-    
-    return den_mat
+    return S_mat
 
 
 def chi_z():
@@ -166,6 +174,7 @@ def continuity_eq():
     Cont_eq_mat = np.zeros((n_time_steps[0], M))
     den_mat = density()
     S_mat = nuclear_phase()
+    z_cood = z_vec()
 
     var = 0
     
@@ -174,7 +183,8 @@ def continuity_eq():
         Diff_J = np.gradient( (den_mat[ii][:]*dsdz)/nuc_mass, dz, edge_order = 2)
         dt_den = np.gradient(den_mat[ii][:], dt, edge_order = 2)
         Cont_eq_mat[ii][:] = Diff_J + dt_den
-        var = var + np.sum(Cont_eq_mat[ii][:]*Cont_eq_mat[ii][:])
+        #var = var + np.sum(Cont_eq_mat[ii][:]*Cont_eq_mat[ii][:])
+        var = var + integrate.simps(Cont_eq_mat[ii][:]*Cont_eq_mat[ii][:], z_cood, dz)
     print("error = ", var)
     return Cont_eq_mat
 
@@ -413,9 +423,11 @@ if __name__ == '__main__':
 
     # Time propagation
    
-    #density() # nuclear density
-    all_kinetic_energy() # all kinetic energies contribution
+    #S_mat = nuclear_phase()
+    #print(S_mat[10][:])
+    #den_mat = density() # nuclear density
+    #all_kinetic_energy() # all kinetic energies contribution
     #tdpes() # Time-dependent potential energy surface
 
-    #ani = SubplotAnimation(z_vec(), BOPE, density(), nuclear_phase(), tdpes(), continuity_eq(), time_step)
-    #ani.save('sticking_exact.mp4')
+    ani = SubplotAnimation(z_vec(), BOPE, density(), nuclear_phase(), tdpes(), continuity_eq(), time_step)
+    ani.save('sticking_exact.mp4')
