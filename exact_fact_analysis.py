@@ -1,38 +1,47 @@
 import numpy as np
 from numpy.core.records import record
 import pandas as pd
-import csv
+import csv, h5py
 
 import matplotlib.pyplot as plt
 from plt_dynamic import *
+from my_tools import *
 from matplotlib.lines import Line2D
 import matplotlib.animation as animation
-
 
 from scipy import integrate
 from scipy.integrate import simps, quad
 from scipy.interpolate import CubicSpline
 
-
 def read_input(file_name='Results/input_NRG.dat'):
     global M, N, leng_z, nuc_mass, dz, Tot_state
-    global Re_Beta, Im_Beta, Beta, BOPE, dt, NACT1, NACT2
+    global Re_Beta, Im_Beta, Beta, BOPE, BOPE_full, dt, NACT1, NACT2
     global n_time_steps, time_step, omega, recorded_step, init_k0
 
-    Im_Beta = pd.read_csv('Results/Im_Beta.dat', dtype = float, sep = '\s+', header = None)
-    Re_Beta = pd.read_csv('Results/Re_Beta.dat', dtype = float, sep = '\s+', header = None)
+    with h5py.File('Results/real_img.h5','r') as hdf:
+      #ls = list(hdf.keys())
+      Im_Beta = hdf.get('imag')
+      Im_Beta = np.array(Im_Beta)
+      Re_Beta = hdf.get('real')
+      Re_Beta = np.array(Re_Beta)
+    
+    Im_Beta = Im_Beta[0:1500,:]
+    Re_Beta = Re_Beta[0:1500,:]
+
+    # Im_Beta = h5file['imag']#pd.read_csv('Results/Im_Beta.dat', dtype = float, sep = '\s+', header = None)
+    # Re_Beta = h5file['real']#pd.read_csv('Results/Re_Beta.dat', dtype = float, sep = '\s+', header = None)
     NACT1 = pd.read_csv('Results/NACT1.dat', dtype = float, sep = '\s+', header = None)
     NACT2 = pd.read_csv('Results/NACT2.dat', dtype = float, sep = '\s+', header = None)
 
     BOPE = pd.read_csv('Results/Energy_BO.dat', dtype = float, sep = '\s+', header = None)
-    Im_Beta = Im_Beta.to_numpy()
-    Re_Beta = Re_Beta.to_numpy()
+    #Im_Beta = Im_Beta.to_numpy()
+    #Re_Beta = Re_Beta.to_numpy()
     NACT1 = NACT1.to_numpy()
     NACT2 = NACT2.to_numpy()
 
     Beta = Re_Beta**2.0 + Im_Beta**2.0
     omega = 0.001
-    #print("omega = ", omega)
+    print("omega = ", omega)
 
     n_time_steps = Beta.shape # number of steps 
     
@@ -40,9 +49,13 @@ def read_input(file_name='Results/input_NRG.dat'):
     M = int(df.loc[1][0]) # number of grid points
     
     # Ground state BOPE 
-    BOPE = BOPE.to_numpy()
-    BOPE[:,0] = BOPE[:,0] - BOPE[M-2,0]
+    BOPE = BOPE.to_numpy()   
+    BOPE_full = BOPE - BOPE[:][0]
+
+    BOPE[:,0] = BOPE[:,0] - BOPE[M-1,0]
     BOPE = list(BOPE[:,0])
+    
+    
     #BOPE.append(BOPE[M-2])
     
     N = int(df.loc[2][0]) # number of wilson chain
@@ -52,7 +65,7 @@ def read_input(file_name='Results/input_NRG.dat'):
     dz = leng_z/M
     nuc_mass = float(df.loc[7][0]) # nucclear mass
     time_step = float(df.loc[9][0]) # time step in a.u
-    recorded_step = 1000
+    recorded_step = 500
     dt = round(recorded_step*time_step,4)  # time step
     Tot_state = int(df.loc[13][0]) # Total number of electronic states
     ...
@@ -79,7 +92,7 @@ def diff_manybody_vec(manybody_vec):
             for kk in range(jj, n_time_steps[1], Tot_state):               
                 temp_vec_jz.append(temp_vec[kk])          
             
-            temp_diff_jz = np.gradient(temp_vec_jz, dz, edge_order = 2)
+            temp_diff_jz = drvtv_1(temp_vec_jz, dz, axis=0, order=2) #np.gradient(temp_vec_jz, dz, edge_order = 2)
             i = 0
             for kk in range(jj, n_time_steps[1], Tot_state):               
                 diff_mat[ii][kk] = temp_diff_jz[i]
@@ -97,7 +110,7 @@ def density():
             Beta1.append(np.sum(Beta[ii][Tot_state*jz:Tot_state*(jz+1)]))
         den_mat[ii][:] = Beta1[:]
         #print(integrate.simps(den_mat[ii][:], z_cood, dz))
-    with open('density.dat', 'w') as f: 
+    with open('dz' + str(init_k0) + 'density.dat', 'w') as f: 
         write = csv.writer(f) 
         write.writerows(den_mat)
     
@@ -179,31 +192,40 @@ def continuity_eq():
     var = 0
     
     for ii in range(n_time_steps[0]):
-        dsdz = np.gradient(S_mat[ii][:], dz, edge_order = 2)
-        Diff_J = np.gradient( (den_mat[ii][:]*dsdz)/nuc_mass, dz, edge_order = 2)
-        dt_den = np.gradient(den_mat[ii][:], dt, edge_order = 2)
+        dsdz = drvtv_1(S_mat[ii][:], dz, axis=0, order=2) #np.gradient(S_mat[ii][:], dz, edge_order = 2)
+        Diff_J = drvtv_1((den_mat[ii][:]*dsdz)/nuc_mass, dz, axis=0, order=2) #np.gradient( (den_mat[ii][:]*dsdz)/nuc_mass, dz, edge_order = 2)
+        dt_den = drvtv_1(den_mat[ii][:], dt, axis=0, order=2) #np.gradient(den_mat[ii][:], dt, edge_order = 2)
         Cont_eq_mat[ii][:] = Diff_J + dt_den
         #var = var + np.sum(Cont_eq_mat[ii][:]*Cont_eq_mat[ii][:])
         var = var + integrate.simps(Cont_eq_mat[ii][:]*Cont_eq_mat[ii][:], z_cood, dz)
     print("error = ", var)
     return Cont_eq_mat
 
-def tdpes():
+def tdpes_S():
 
     tdpes_mat = np.zeros((n_time_steps[0], M))
+    dt_S = np.zeros((n_time_steps[0], M))
+
     den_mat = density()
     S_mat = nuclear_phase()
 
-    tdpes_mat = np.zeros((n_time_steps[0], M))
-    
     for ii in range(n_time_steps[0]):
-        dt_tdpes = -np.gradient(S_mat[ii][:], dt, edge_order=2)
-        dsdz = np.gradient(S_mat[ii][:], dz, edge_order=2)
-        dchidz =  np.gradient(np.sqrt(den_mat[ii][:]), dz, edge_order=2)
-        d2chidz =  np.gradient(dchidz, dz, edge_order=2)
-        tdpes_mat[ii][:] = dt_tdpes[:] + ( d2chidz/( np.sqrt(den_mat[ii][:]) + omega) - dsdz[:]**2.0 )/(2.0*nuc_mass)
-    
-    with open('TDPES.dat', 'w') as f: 
+        if ii == 0:
+            dt_S[ii][:] = (-S_mat[ii+2][:] + 4.0*S_mat[ii+1][:] - 3.0*S_mat[ii][:])/(2.0*dt)
+        elif ii == n_time_steps[0]-1:
+            dt_S[ii][:] = (3.0*S_mat[ii][:] -4.0*S_mat[ii-1][:] + S_mat[ii-2][:])/(2.0*dt)
+        else:
+            dt_S[ii][:] = (S_mat[ii+1][:] - S_mat[ii-1][:])/(2.0*dt)
+
+    # tdpes_mat = np.zeros((n_time_steps[0], M))
+
+    for ii in range(n_time_steps[0]):
+        dsdz = drvtv_1(S_mat[ii][:], dz, axis=0, order=2) #np.gradient(S_mat[ii][:], dz, edge_order=2)
+        dchidz = drvtv_1(np.sqrt(den_mat[ii][:]), dz, axis=0, order=2) #np.gradient(np.sqrt(den_mat[ii][:]), dz, edge_order=2)
+        d2chidz =  drvtv_1(dchidz, dz, axis=0, order=2) #np.gradient(dchidz, dz, edge_order=2)
+        tdpes_mat[ii,:] = -dt_S[ii,:] + ( d2chidz/( np.sqrt(den_mat[ii][:]) + omega) - dsdz[:]**2.0 )/(2.0*nuc_mass)
+        
+    with open('dz' + str(init_k0) + 'TDPES.dat', 'w') as f: 
         write = csv.writer(f) 
         write.writerows(tdpes_mat)
     
@@ -244,6 +266,94 @@ def phi_z():
             i += 1
     return Re_phi_z, Im_phi_z
 
+
+def tdpes_phi_z():
+
+  tdpes_mat = np.zeros((n_time_steps[0], M))
+
+  BOPE_mat = np.zeros((n_time_steps[0], M))
+  dt_phi_z = np.zeros((n_time_steps[0], M))
+  d2_phi_z = np.zeros((n_time_steps[0], M))
+
+  dt_Re_phi_z = np.zeros(n_time_steps)
+  dt_Im_phi_z = np.zeros(n_time_steps)
+
+  Re_phi_z = np.zeros(n_time_steps)   
+  Im_phi_z = np.zeros(n_time_steps)
+  Re_phi_z , Im_phi_z = phi_z() 
+
+  diff_Re_Beta = diff_manybody_vec(Re_phi_z)
+  diff_Im_Beta = diff_manybody_vec(Im_phi_z)
+
+  diff2_Re_Beta = diff_manybody_vec(diff_Re_Beta)
+  diff2_Im_Beta = diff_manybody_vec(diff_Im_Beta)
+  
+  for ii in range(n_time_steps[0]):
+    if ii == 0:
+      dt_Re_phi_z[ii][:] = (-Re_phi_z[ii+2][:] + 4.0*Re_phi_z[ii+1][:] - 3.0*Re_phi_z[ii][:])/(2.0*dt)
+      dt_Im_phi_z[ii][:] = (-Im_phi_z[ii+2][:] + 4.0*Im_phi_z[ii+1][:] - 3.0*Im_phi_z[ii][:])/(2.0*dt)
+    elif ii == n_time_steps[0]-1:
+      dt_Re_phi_z[ii][:] = (3.0*Re_phi_z[ii][:] -4.0*Re_phi_z[ii-1][:] + Re_phi_z[ii-2][:])/(2.0*dt)
+      dt_Im_phi_z[ii][:] = (3.0*Im_phi_z[ii][:] -4.0*Im_phi_z[ii-1][:] + Im_phi_z[ii-2][:])/(2.0*dt)
+    else:
+      dt_Re_phi_z[ii][:] = (Re_phi_z[ii+1][:] - Re_phi_z[ii-1][:])/(2.0*dt)
+      dt_Im_phi_z[ii][:] = (Im_phi_z[ii+1][:] - Im_phi_z[ii-1][:])/(2.0*dt)
+
+    for jz in range(M):
+        
+        temp_NACT1 = np.zeros([Tot_state, Tot_state])
+        temp_NACT1 = NACT1[Tot_state*jz:Tot_state*(jz+1)][:]
+
+        temp_NACT2 = np.zeros([Tot_state, Tot_state])
+        temp_NACT2 = NACT2[Tot_state*jz:Tot_state*(jz+1)][:]
+
+        temp_BOPE = np.array(BOPE_full[jz,:])
+
+        temp_Re_phi_z = np.zeros(Tot_state)
+        temp_Im_phi_z = np.zeros(Tot_state)
+        
+        temp_d1_Re_phi_z = np.zeros(Tot_state)
+        temp_d1_Im_phi_z = np.zeros(Tot_state)
+
+        temp_d2_Re_phi_z = np.zeros(Tot_state)
+        temp_d2_Im_phi_z = np.zeros(Tot_state)            
+        
+        temp_dt_Re_phi_z = np.zeros(Tot_state)
+        temp_dt_Im_phi_z = np.zeros(Tot_state)                       
+        
+        temp_Re_phi_z = np.array(Re_phi_z[ii][Tot_state*jz:Tot_state*(jz+1)])   
+        temp_Im_phi_z = np.array(Im_phi_z[ii][Tot_state*jz:Tot_state*(jz+1)])
+        temp_dt_Re_phi_z = np.array(dt_Re_phi_z[ii][Tot_state*jz:Tot_state*(jz+1)])   
+        temp_dt_Im_phi_z = np.array(dt_Im_phi_z[ii][Tot_state*jz:Tot_state*(jz+1)])
+
+        temp_d1_Re_phi_z = np.array(diff_Re_Beta[ii][Tot_state*jz:Tot_state*(jz+1)])
+        temp_d1_Im_phi_z = np.array(diff_Im_Beta[ii][Tot_state*jz:Tot_state*(jz+1)])
+
+        temp_d2_Re_phi_z = np.array(diff2_Re_Beta[ii][Tot_state*jz:Tot_state*(jz+1)])   
+        temp_d2_Im_phi_z = np.array(diff2_Im_Beta[ii][Tot_state*jz:Tot_state*(jz+1)])
+        # <Re(phi_z)| d(Im(phi_z))/dt|> and <Im(phi_z)| d(Re(phi_z))/dt|>
+        dt_phi_z[ii,jz] = ( np.inner(temp_Re_phi_z, temp_dt_Im_phi_z) - \
+            np.inner(temp_Im_phi_z, temp_dt_Re_phi_z) )
+
+
+        temp_d1 = 0.0
+        temp_d2 = 0.0
+        for ll in range(Tot_state):
+            for kk in range(Tot_state):
+                temp_d1 = temp_d1 + (temp_Re_phi_z[ll]*temp_d1_Re_phi_z[kk] + temp_Im_phi_z[ll]*temp_d1_Im_phi_z[kk])*temp_NACT1[ll][kk]
+                temp_d2 = temp_d2 + (temp_Re_phi_z[ll]*temp_Re_phi_z[kk] + temp_Im_phi_z[ll]*temp_Im_phi_z[kk])*temp_NACT2[ll][kk]
+        
+        d2_phi_z[ii,jz] = (np.inner(temp_Re_phi_z, temp_d2_Re_phi_z) + np.inner(temp_Im_phi_z, temp_d2_Im_phi_z)) + 2.0*temp_d1 + temp_d2
+
+
+        BOPE_mat[ii,jz] = np.inner(temp_BOPE, np.abs(temp_Im_phi_z)**2.0 + np.abs(temp_Re_phi_z)**2.0)
+
+    tdpes_mat[ii,:] = BOPE_mat[ii,:] #+ dt_phi_z[ii,:] - d2_phi_z[ii,:]/(2.0*nuc_mass) - BOPE_full[:,0]
+      
+  return tdpes_mat
+
+
+
 def all_kinetic_energy():
 
     exact_data = np.zeros([n_time_steps[0],5])
@@ -275,10 +385,10 @@ def all_kinetic_energy():
         Re_int = []
         Im_int = []
 
-        Re_dchi_dz = np.gradient(Re_chi_z[ii][:], dz, edge_order=2)
-        Im_dchi_dz = np.gradient(Im_chi_z[ii][:], dz, edge_order=2)
-        Re_d2chi_dz2 = np.gradient(Re_dchi_dz, dz, edge_order=2)
-        Im_d2chi_dz2 = np.gradient(Im_dchi_dz, dz, edge_order=2)
+        Re_dchi_dz = drvtv_1(Re_chi_z[ii][:], dz, axis=0, order=2) #np.gradient(Re_chi_z[ii][:], dz, edge_order=2)
+        Im_dchi_dz = drvtv_1(Im_chi_z[ii][:], dz, axis=0, order=2) #np.gradient(Im_chi_z[ii][:], dz, edge_order=2)
+        Re_d2chi_dz2 = drvtv_1(Re_dchi_dz, dz, axis=0, order=2) #np.gradient(Re_dchi_dz, dz, edge_order=2)
+        Im_d2chi_dz2 = drvtv_1(Im_dchi_dz, dz, axis=0, order=2) #np.gradient(Im_dchi_dz, dz, edge_order=2)
 
         Re_int = list(np.array(Re_chi_z[ii][:])*np.array(Re_d2chi_dz2))
         Im_int = list(np.array(Im_chi_z[ii][:])*np.array(Im_d2chi_dz2))
@@ -407,7 +517,7 @@ def all_kinetic_energy():
     exact_data[:,4] = Tn_Psi
     details = ['%Time',       'Tn-marg','          Tn-Phy','             d-geo','         Tn-Psi']
 
-    with open('exact_data.dat', 'w') as f: 
+    with open('dz' + str(init_k0) + 'exact_data.dat', 'w') as f: 
         write = csv.writer(f) 
         write.writerow(details) 
         write.writerows(exact_data)
@@ -429,5 +539,5 @@ if __name__ == '__main__':
     #all_kinetic_energy() # all kinetic energies contribution
     #tdpes() # Time-dependent potential energy surface
 
-    ani = SubplotAnimation(z_vec(), BOPE, density(), nuclear_phase(), tdpes(), continuity_eq(), time_step)
-    ani.save('sticking_exact.mp4')
+    ani = SubplotAnimation(z_vec(), BOPE, density(), nuclear_phase(), tdpes_S(), continuity_eq(), time_step, recorded_step)
+    ani.save('dz' + str(init_k0) + 'sticking_exact.mp4')
