@@ -5,6 +5,7 @@ import csv, h5py
 
 import matplotlib.pyplot as plt
 from plt_dynamic import *
+from plt_dynamic_td import *
 from my_tools import *
 from matplotlib.lines import Line2D
 import matplotlib.animation as animation
@@ -25,8 +26,8 @@ def read_input(file_name='Results/input_NRG.dat'):
       Re_Beta = hdf.get('real')
       Re_Beta = np.array(Re_Beta)
     
-    Im_Beta = Im_Beta[0:1500,:]
-    Re_Beta = Re_Beta[0:1500,:]
+    Im_Beta = Im_Beta[0:400,:] # 3300
+    Re_Beta = Re_Beta[0:400,:] # 3300 
 
     # Im_Beta = h5file['imag']#pd.read_csv('Results/Im_Beta.dat', dtype = float, sep = '\s+', header = None)
     # Re_Beta = h5file['real']#pd.read_csv('Results/Re_Beta.dat', dtype = float, sep = '\s+', header = None)
@@ -103,7 +104,7 @@ def diff_manybody_vec(manybody_vec):
 def density():
 
     den_mat = np.zeros((n_time_steps[0], M))
-    #z_cood = z_vec()
+    z_cood = z_vec()
     for ii in range(n_time_steps[0]):
         Beta1=[]
         for jz in range(M):
@@ -156,7 +157,7 @@ def nuclear_phase():
             temp_diff_Im_jz = np.array(diff_Im_Beta[ii][Tot_state*jz:Tot_state*(jz+1)])
         
             temp_dsdz[jz] = (np.inner(temp_Re_jz, temp_diff_Im_jz) - np.inner(temp_Im_jz,temp_diff_Re_jz) + dsdz_NACT_d1[ii][jz])/( den_mat[ii,jz] + omega )
-            #temp_dsdz[jz] = ( np.inner(temp_Re_jz, temp_diff_Im_jz) - np.inner(temp_Im_jz,temp_diff_Re_jz) )/( den_mat[ii][jz] + omega )
+            temp_dsdz[jz] = ( np.inner(temp_Re_jz, temp_diff_Im_jz) - np.inner(temp_Im_jz,temp_diff_Re_jz) )/( den_mat[ii][jz] + omega )
         cs = CubicSpline(z_vec, temp_dsdz)
 
         for jz in range(M):
@@ -347,10 +348,10 @@ def tdpes_phi_z():
 
 
         BOPE_mat[ii,jz] = np.inner(temp_BOPE, np.abs(temp_Im_phi_z)**2.0 + np.abs(temp_Re_phi_z)**2.0)
-
+        #print(np.abs(temp_Im_phi_z)**2.0 + np.abs(temp_Re_phi_z)**2.0, jz, ii)
     tdpes_mat[ii,:] = BOPE_mat[ii,:] #+ dt_phi_z[ii,:] - d2_phi_z[ii,:]/(2.0*nuc_mass) - BOPE_full[:,0]
       
-  return tdpes_mat
+  return tdpes_mat, dt_phi_z
 
 
 
@@ -520,8 +521,7 @@ def all_kinetic_energy():
     with open('dz' + str(init_k0) + 'exact_data.dat', 'w') as f: 
         write = csv.writer(f) 
         write.writerow(details) 
-        write.writerows(exact_data)
-    print("Hi Celso") 
+        write.writerows(exact_data) 
     # plt.plot(Tn_Psi,'-o')
     # plt.show()
     #return d_geo_z
@@ -537,7 +537,9 @@ if __name__ == '__main__':
     #print(S_mat[10][:])
     #den_mat = density() # nuclear density
     #all_kinetic_energy() # all kinetic energies contribution
-    #tdpes() # Time-dependent potential energy surface
+    BO_t1, dt_t1 = tdpes_phi_z() # Time-dependent potential energy surface
 
-    ani = SubplotAnimation(z_vec(), BOPE, density(), nuclear_phase(), tdpes_S(), continuity_eq(), time_step, recorded_step)
+    # ani = SubplotAnimation(z_vec(), BOPE, density(), nuclear_phase(), tdpes_phi_z(), continuity_eq(), time_step, recorded_step)
+    # ani.save('dz' + str(init_k0) + 'sticking_exact.mp4')
+    ani = dt_SubplotAnimation(z_vec(), BOPE, BO_t1, dt_t1, tdpes_S(), tdpes_S()-dt_t1, time_step, recorded_step)
     ani.save('dz' + str(init_k0) + 'sticking_exact.mp4')
