@@ -33,7 +33,7 @@ In the `exact_fact_analysis.py` file we may have following options:
 The script will run by default only for lines 4. and 5., while the other lines remain commented. This creates `density.dat` (nuclear density), 
 `exact_data.dat` (all kinetic energies contribution), and `TDPES.dat` (Time-dependent potential energy surface) as output files.
 
-Running `python plot_Tn.py` will create a figure with all kinetic energies contribution. The `plt_dynamic.py` is class to generate the `.mp4` file, and it is part of the `exact_fact_analysis.py` script.
+Running `python plot_Tn.py` will create a figure with all kinetic energies contribution. The `plt_dynamic.py` is the class to generate the `.mp4` file and is part of the `exact_fact_analysis.py` script.
 
 
 
