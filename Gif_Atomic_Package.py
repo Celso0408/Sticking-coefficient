@@ -9,11 +9,11 @@ from matplotlib import rcParams
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 from matplotlib.offsetbox import AnchoredOffsetbox
 from matplotlib.patches import FancyArrowPatch
-Nz = 800+1
-Na = 1000+1
-T  = 2000
-Lz = 8.75
-FLAG = "Results_t="
+Nz = 800+1					# Discretization of the Box
+Lz = 8.75					# Box Lenght
+Na = 1000+1					# Number of output times
+T  = 2000					# Maximum simulated time
+FLAG = "Results_t="				# Collision.jl output flag
 time = np.ones(Na)
 for j in range(0,Na):
         time[j]  = int(j)
