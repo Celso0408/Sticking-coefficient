@@ -10,7 +10,7 @@ from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 from matplotlib.offsetbox import AnchoredOffsetbox
 from matplotlib.patches import FancyArrowPatch
 Nz = 800+1					# Discretization of the Box
-Lz = 8.75					# Box Lenght
+Lz = 8.75					# Box Length
 Na = 1000+1					# Number of output times
 T  = 2000					# Maximum simulated time
 FLAG = "Results_t="				# Collision.jl output flag
