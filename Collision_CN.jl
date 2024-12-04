@@ -36,7 +36,7 @@ const k0  = sqrt(2*M*K_0/D)							# Initial Kinetic quasi momentum // Kinetic en
 ###########################################--- Eletronic parameters ---############################################################
 ###################################################################################################################################
 const NeT= 35									# Total Number of Electronic states
-const Ne = 1									# Number of Electronic states to work with <= NeT
+const Ne = 35									# Number of Electronic states to work with <= NeT
 const NeI= 1									# Initial electronic configuration
 ###################################################################################################################################
 ############################################---- Initializing ----#################################################################
